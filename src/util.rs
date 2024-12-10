@@ -1,9 +1,11 @@
 use rocket::http::ContentType;
 use cached::proc_macro::once;
+use foyer::HybridCache;
 use reqwest::Client;
 use anyhow::Result;
 
 use crate::did_doc::DidDocument;
+use crate::BlobIdentifier;
 
 const PLC_DIRECTORY: &str = "https://plc.directory";
 
@@ -12,9 +14,15 @@ pub fn extract_content_type(bytes: &[u8]) -> ContentType {
     ContentType::parse_flexible(mime).unwrap_or(ContentType::Binary)
 }
 
-pub async fn get_blob(client: &Client, endpoint: &str, did: &str, cid: &str) -> Result<Vec<u8>> {
-    let url = format!("{endpoint}/xrpc/com.atproto.sync.getBlob?did={did}&cid={cid}");
+pub async fn get_blob(client: &Client, cache: &HybridCache<BlobIdentifier, Vec<u8>>, endpoint: &str, id: &BlobIdentifier) -> Result<Vec<u8>> {
+    if let Some(blob) = cache.get(id).await? {
+        println!("@INFO: Found cache entry for blob '{}/{}'", id.did, id.cid);
+        return Ok(blob.value().to_owned());
+    }
+    println!("@INFO: Cache miss for blob '{}/{}'", id.did, id.cid);
+    let url = format!("{endpoint}/xrpc/com.atproto.sync.getBlob?did={}&cid={}", id.did, id.cid);
     let blob = client.get(url).send().await?.bytes().await?;
+    cache.insert(id.clone(), blob.clone().to_vec());
     Ok(blob.to_vec())
 }
 

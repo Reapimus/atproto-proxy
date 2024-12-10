@@ -1,22 +1,24 @@
-use image::imageops::{resize, FilterType};
 use rocket::http::{Accept, ContentType, Status};
+use image::imageops::{resize, FilterType};
+use foyer::HybridCache;
 use image::ImageReader;
-use std::io::Cursor;
 use std::path::PathBuf;
 use std::str::FromStr;
+use std::io::Cursor;
 use reqwest::Client;
 use rocket::State;
 
 use crate::params::{ImageType, ProxyParameters};
+use crate::BlobIdentifier;
 use crate::util;
 
 #[get("/img/<did>/<cid..>")]
-pub async fn get_image(client: &State<Client>, accepts: &Accept, did: &str, cid: PathBuf) -> Result<(ContentType, Vec<u8>), Status> {
+pub async fn get_image(client: &State<Client>, cache: &State<HybridCache<BlobIdentifier, Vec<u8>>>, accepts: &Accept, did: &str, cid: PathBuf) -> Result<(ContentType, Vec<u8>), Status> {
     let cid = cid.to_str().unwrap();
     let (cid, parameters) = cid.split_once('@').unwrap_or((cid, ""));
     match util::get_pds(client, did).await {
         Ok(endpoint) => {
-            let mut blob = match util::get_blob(client, &endpoint, did, cid).await {
+            let mut blob = match util::get_blob(client, cache, &endpoint, &BlobIdentifier::new(did.to_owned(), cid.to_owned())).await {
                 Ok(blob) => blob,
                 Err(_) => {
                     return Err(Status::NotFound)

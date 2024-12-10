@@ -1,0 +1,4 @@
+[default.cache]
+capacity = 1024
+# shards = 8
+diskLocation = "/data/atproto-proxy"

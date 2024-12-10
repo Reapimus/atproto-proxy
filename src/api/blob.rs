@@ -1,14 +1,16 @@
 use rocket::http::{ContentType, Status};
+use foyer::HybridCache;
 use reqwest::Client;
 use rocket::State;
 
+use crate::BlobIdentifier;
 use crate::util;
 
 #[get("/blob/<did>/<cid>")]
-pub async fn get_blob(client: &State<Client>, did: &str, cid: &str) -> Result<(ContentType, Vec<u8>), Status> {
+pub async fn get_blob(client: &State<Client>, cache: &State<HybridCache<BlobIdentifier, Vec<u8>>>, did: &str, cid: &str) -> Result<(ContentType, Vec<u8>), Status> {
     match util::get_pds(client, did).await {
         Ok(endpoint) => {
-            let blob = match util::get_blob(client, &endpoint, did, cid).await {
+            let blob = match util::get_blob(client, cache, &endpoint, &BlobIdentifier::new(did.to_owned(), cid.to_owned())).await {
                 Ok(blob) => blob,
                 Err(_) => {
                     return Err(Status::NotFound)
