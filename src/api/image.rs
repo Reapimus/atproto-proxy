@@ -28,6 +28,9 @@ pub async fn get_image(client: &State<Client>, accepts: &Accept, did: &str, cid:
             };
             println!("@INFO: Proxy parameters: {:?}", params);
             let mut content_type = util::extract_content_type(&blob);
+            if !content_type.to_string().starts_with("image/") {
+                return Err(Status::BadRequest)
+            }
 
             if params.file_type == ImageType::Best {
                 for t in accepts.iter() {
