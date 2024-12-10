@@ -1,0 +1,14 @@
+[package]
+name = "atproto-proxy"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+http = "1.1.0"
+image = "0.25.5"
+rocket = "0.5.1"
+serde = "1.0.215"
+anyhow = "1.0.94"
+tree_magic_mini = "3.1.6"
+cached = { version = "0.54.0", features = ["async"] }
+reqwest = { version = "0.12.9", features = ["json"] }
