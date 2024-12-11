@@ -8,17 +8,25 @@ use std::io::Cursor;
 use reqwest::Client;
 use rocket::State;
 
+use crate::config::Config;
 use crate::params::{ImageType, ProxyParameters};
 use crate::BlobIdentifier;
 use crate::util;
 
 #[get("/img/<did>/<cid..>")]
-pub async fn get_image(client: &State<Client>, cache: &State<HybridCache<BlobIdentifier, Vec<u8>>>, accepts: &Accept, did: &str, cid: PathBuf) -> Result<(ContentType, Vec<u8>), Status> {
+pub async fn get_image(
+    client: &State<Client>,
+    cache: &State<HybridCache<BlobIdentifier, Vec<u8>>>,
+    config: &State<Config>,
+    accepts: &Accept,
+    did: &str,
+    cid: PathBuf
+) -> Result<(ContentType, Vec<u8>), Status> {
     let cid = cid.to_str().unwrap();
     let (cid, parameters) = cid.split_once('@').unwrap_or((cid, ""));
     match util::get_pds(client, did).await {
         Ok(endpoint) => {
-            let mut blob = match util::get_blob(client, cache, &endpoint, &BlobIdentifier::new(did.to_owned(), cid.to_owned())).await {
+            let mut blob = match util::get_blob(config, client, cache, &endpoint, &BlobIdentifier::new(did.to_owned(), cid.to_owned())).await {
                 Ok(blob) => blob,
                 Err(_) => {
                     return Err(Status::NotFound)

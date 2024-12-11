@@ -6,7 +6,22 @@ use crate::BlobIdentifier;
 #[derive(Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Config {
+    pub core: CoreConfig,
     pub cache: CacheConfig,
+}
+
+#[derive(Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CoreConfig {
+    pub max_blob_size: usize,
+}
+
+impl Default for CoreConfig {
+    fn default() -> Self {
+        Self {
+            max_blob_size: 3_000_000,
+        }
+    }
 }
 
 #[derive(Serialize, Deserialize)]
