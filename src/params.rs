@@ -1,6 +1,7 @@
 use std::str::FromStr;
 
-use rocket::http::ContentType;
+use rocket::http::{ContentType, QMediaType};
+use image::ImageFormat;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum ImageType {
@@ -40,6 +41,30 @@ impl Into<ContentType> for ImageType {
             ImageType::JPEG => ContentType::JPEG,
             ImageType::WEBP => ContentType::WEBP,
             ImageType::GIF => ContentType::GIF,
+        }
+    }
+}
+
+impl Into<ImageFormat> for ImageType {
+    fn into(self) -> ImageFormat {
+        match self {
+            ImageType::Best => ImageFormat::Png,
+            ImageType::PNG => ImageFormat::Png,
+            ImageType::JPEG => ImageFormat::Jpeg,
+            ImageType::WEBP => ImageFormat::WebP,
+            ImageType::GIF => ImageFormat::Gif,
+        }
+    }
+}
+
+impl From<&QMediaType> for ImageType {
+    fn from(media_type: &QMediaType) -> Self {
+        match (media_type.top().as_str(), media_type.sub().as_str()) {
+            ("image", "png") => ImageType::PNG,
+            ("image", "jpeg") => ImageType::JPEG,
+            ("image", "webp") => ImageType::WEBP,
+            ("image", "gif") => ImageType::GIF,
+            _ => ImageType::Best
         }
     }
 }

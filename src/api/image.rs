@@ -51,18 +51,14 @@ async fn get_image_inner(
 
             if params.file_type == ImageType::Best {
                 for t in accepts.iter() {
-                    if t.is_jpeg() {
-                        params.file_type = ImageType::JPEG;
-                    } else if t.is_png() {
-                        params.file_type = ImageType::PNG;
-                    } else if t.is_gif() {
-                        params.file_type = ImageType::GIF;
-                    } else if t.is_webp() {
-                        params.file_type = ImageType::WEBP;
+                    let it = ImageType::from(t);
+                    match it {
+                        ImageType::Best => params.file_type = ImageType::JPEG,
+                        _ => {
+                            params.file_type = it;
+                            break;
+                        }
                     }
-                }
-                if params.file_type == ImageType::Best {
-                    params.file_type = ImageType::JPEG;
                 }
             }
 
@@ -70,27 +66,11 @@ async fn get_image_inner(
                 let reader = ImageReader::new(std::io::Cursor::new(blob)).with_guessed_format().map_err(|_| Status::BadRequest)?;
                 content_type = params.file_type.into();
                 let mut bytes: Vec<u8> = Vec::new();
-                match params.file_type {
-                    ImageType::JPEG => {
-                        let img = reader.decode().map_err(|_| Status::BadRequest)?;
-                        img.write_to(&mut Cursor::new(&mut bytes), image::ImageFormat::Jpeg).map_err(|_| Status::BadRequest)?;
-                    },
-                    ImageType::PNG => {
-                        let img = reader.decode().map_err(|_| Status::BadRequest)?;
-                        img.write_to(&mut Cursor::new(&mut bytes), image::ImageFormat::Png).map_err(|_| Status::BadRequest)?;
-                    },
-                    ImageType::GIF => {
-                        let img = reader.decode().map_err(|_| Status::BadRequest)?;
-                        img.write_to(&mut Cursor::new(&mut bytes), image::ImageFormat::Gif).map_err(|_| Status::BadRequest)?;
-                    },
-                    ImageType::WEBP => {
-                        let img = reader.decode().map_err(|_| Status::BadRequest)?;
-                        img.write_to(&mut Cursor::new(&mut bytes), image::ImageFormat::WebP).map_err(|_| Status::BadRequest)?;
-                    },
-                    _ => {
-                        return Err(Status::BadRequest)
-                    }
-                }
+                let img = reader.decode().map_err(|_| Status::BadRequest)?;
+                img.write_to(
+                    &mut Cursor::new(&mut bytes),
+                    params.file_type.try_into().map_err(|_| Status::BadRequest)?
+                ).map_err(|_| Status::BadRequest)?;
                 blob = bytes;
             }
 
@@ -99,23 +79,10 @@ async fn get_image_inner(
                 let img = reader.decode().map_err(|_| Status::BadRequest)?;
                 let buffer = resize(&img, resolution.0, resolution.1, FilterType::Gaussian);
                 let mut bytes: Vec<u8> = Vec::new();
-                match params.file_type {
-                    ImageType::JPEG => {
-                        buffer.write_to(&mut Cursor::new(&mut bytes), image::ImageFormat::Jpeg).map_err(|_| Status::BadRequest)?;
-                    },
-                    ImageType::PNG => {
-                        buffer.write_to(&mut Cursor::new(&mut bytes), image::ImageFormat::Png).map_err(|_| Status::BadRequest)?;
-                    },
-                    ImageType::GIF => {
-                        buffer.write_to(&mut Cursor::new(&mut bytes), image::ImageFormat::Gif).map_err(|_| Status::BadRequest)?;
-                    },
-                    ImageType::WEBP => {
-                        buffer.write_to(&mut Cursor::new(&mut bytes), image::ImageFormat::WebP).map_err(|_| Status::BadRequest)?;
-                    },
-                    _ => {
-                        return Err(Status::BadRequest)
-                    }
-                }
+                buffer.write_to(
+                    &mut Cursor::new(&mut bytes),
+                    params.file_type.try_into().map_err(|_| Status::BadRequest)?
+                ).map_err(|_| Status::BadRequest)?;
                 blob = bytes;
             }
 
