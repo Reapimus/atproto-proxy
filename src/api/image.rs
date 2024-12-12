@@ -1,5 +1,6 @@
 use rocket::http::{Accept, ContentType, Status};
 use image::imageops::{resize, FilterType};
+#[cfg(feature = "blob_cache")]
 use foyer::HybridCache;
 use image::ImageReader;
 use std::path::PathBuf;
@@ -8,14 +9,14 @@ use std::io::Cursor;
 use reqwest::Client;
 use rocket::State;
 
-use crate::config::Config;
 use crate::params::{ImageType, ProxyParameters};
+use crate::config::Config;
 use crate::BlobIdentifier;
 use crate::util;
 
-#[get("/img/<did>/<cid..>")]
-pub async fn get_image(
+async fn get_image_inner(
     client: &State<Client>,
+    #[cfg(feature = "blob_cache")]
     cache: &State<HybridCache<BlobIdentifier, Vec<u8>>>,
     config: &State<Config>,
     accepts: &Accept,
@@ -26,7 +27,13 @@ pub async fn get_image(
     let (cid, parameters) = cid.split_once('@').unwrap_or((cid, ""));
     match util::get_pds(client, did).await {
         Ok(endpoint) => {
-            let mut blob = match util::get_blob(config, client, cache, &endpoint, &BlobIdentifier::new(did.to_owned(), cid.to_owned())).await {
+            let mut blob = match util::get_blob(
+                config,
+                client,
+                #[cfg(feature = "blob_cache")] cache,
+                &endpoint,
+                &BlobIdentifier::new(did.to_owned(), cid.to_owned())
+            ).await {
                 Ok(blob) => blob,
                 Err(_) => {
                     return Err(Status::NotFound)
@@ -118,6 +125,31 @@ pub async fn get_image(
             return Err(Status::NotFound)
         },
     }
+}
+
+#[cfg(feature = "blob_cache")]
+#[get("/img/<did>/<cid..>")]
+pub async fn get_image(
+    client: &State<Client>,
+    cache: &State<HybridCache<BlobIdentifier, Vec<u8>>>,
+    config: &State<Config>,
+    accepts: &Accept,
+    did: &str,
+    cid: PathBuf
+) -> Result<(ContentType, Vec<u8>), Status> {
+    return get_image_inner(client, cache, config, accepts, did, cid).await
+}
+
+#[cfg(not(feature = "blob_cache"))]
+#[get("/img/<did>/<cid..>")]
+pub async fn get_image(
+    client: &State<Client>,
+    config: &State<Config>,
+    accepts: &Accept,
+    did: &str,
+    cid: PathBuf
+) -> Result<(ContentType, Vec<u8>), Status> {
+    return get_image_inner(client, config, accepts, did, cid).await
 }
 
 pub fn routes() -> Vec<rocket::Route> {

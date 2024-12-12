@@ -1,12 +1,15 @@
+#[cfg(feature = "blob_cache")]
 use foyer::{HybridCache, HybridCacheBuilder, Engine, DirectFsDeviceOptions};
 use serde::{Deserialize, Serialize};
 
+#[cfg(feature = "blob_cache")]
 use crate::BlobIdentifier;
 
 #[derive(Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Config {
     pub core: CoreConfig,
+    #[cfg(feature = "blob_cache")]
     pub cache: CacheConfig,
 }
 
@@ -26,12 +29,14 @@ impl Default for CoreConfig {
 
 #[derive(Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+#[cfg(feature = "blob_cache")]
 pub struct CacheConfig {
     pub capacity: usize,
     pub shards: Option<usize>,
     pub disk_location: String,
 }
 
+#[cfg(feature = "blob_cache")]
 impl CacheConfig {
     pub async fn build(&self) -> HybridCache<BlobIdentifier, Vec<u8>> {
         match self.shards {
@@ -58,6 +63,7 @@ impl CacheConfig {
     }
 }
 
+#[cfg(feature = "blob_cache")]
 impl Default for CacheConfig {
     fn default() -> Self {
         Self {

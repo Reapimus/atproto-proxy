@@ -1,11 +1,12 @@
 use rocket::http::ContentType;
 use cached::proc_macro::once;
+#[cfg(feature = "blob_cache")]
 use foyer::HybridCache;
 use reqwest::Client;
 use anyhow::Result;
 
-use crate::config::Config;
 use crate::did_doc::DidDocument;
+use crate::config::Config;
 use crate::BlobIdentifier;
 
 const PLC_DIRECTORY: &str = "https://plc.directory";
@@ -15,11 +16,20 @@ pub fn extract_content_type(bytes: &[u8]) -> ContentType {
     ContentType::parse_flexible(mime).unwrap_or(ContentType::Binary)
 }
 
-pub async fn get_blob(config: &Config, client: &Client, cache: &HybridCache<BlobIdentifier, Vec<u8>>, endpoint: &str, id: &BlobIdentifier) -> Result<Vec<u8>> {
+pub async fn get_blob(
+    config: &Config,
+    client: &Client,
+    #[cfg(feature = "blob_cache")]
+    cache: &HybridCache<BlobIdentifier, Vec<u8>>,
+    endpoint: &str,
+    id: &BlobIdentifier
+) -> Result<Vec<u8>> {
+    #[cfg(feature = "blob_cache")]
     if let Some(blob) = cache.get(id).await? {
         println!("@INFO: Found cache entry for blob '{}/{}'", id.did, id.cid);
         return Ok(blob.value().to_owned());
     }
+    #[cfg(feature = "blob_cache")]
     println!("@INFO: Cache miss for blob '{}/{}'", id.did, id.cid);
     let core_config = &config.core;
     let url = format!("{endpoint}/xrpc/com.atproto.sync.getBlob?did={}&cid={}", id.did, id.cid);
@@ -30,6 +40,7 @@ pub async fn get_blob(config: &Config, client: &Client, cache: &HybridCache<Blob
             anyhow::bail!("Blob size exceeds maximum allowed size");
         }
     }
+    #[cfg(feature = "blob_cache")]
     cache.insert(id.clone(), blob.clone().to_vec());
     Ok(blob.to_vec())
 }

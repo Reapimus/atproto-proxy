@@ -1,8 +1,8 @@
 #[macro_use] extern crate rocket;
 
+use serde::{Deserialize, Serialize};
 use reqwest::ClientBuilder;
 use config::Config;
-use serde::{Deserialize, Serialize};
 
 #[catch(404)]
 fn not_found() -> &'static str {
@@ -25,14 +25,18 @@ async fn rocket() -> _ {
         .build()
         .unwrap();
 
+    #[cfg(feature = "blob_cache")]
     let cache = config.cache.build().await;
 
-    rocket
+    let rocket = rocket
         .manage(client)
-        .manage(cache)
         .manage(config)
         .register("/", catchers![not_found, bad_request])
-        .mount("/", api::routes())
+        .mount("/", api::routes());
+
+    #[cfg(feature = "blob_cache")]
+    let rocket = rocket.manage(cache);
+    rocket
 }
 
 #[derive(Clone, Hash, PartialEq, Eq, Serialize, Deserialize)]
