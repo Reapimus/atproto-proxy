@@ -1,7 +1,12 @@
 # ATProto Proxy
-This is a WIP service for proxying ATProto blobs and transforming them for the requesting client. Currently this only supports proxying images.
+This is a WIP service for proxying ATProto blobs and transforming them for the requesting client.
 
-The proxy utilizes a hybrid memory/disk cache which can be configured by providing a `Rocket.toml` file. An example configuration file is provided with all possible configuration fields.
+When signing is enabled, all routes expect a signature to be provided via the `sig` query parameter. Signatures should be the path of the route signed using sha256 with the signing key providing in the config.
+
+## Configuration
+Various configuration options are provided for this proxy so that it can be set up however it is needed. An example configuration file is provided in `Rocket.example.toml`.
+
+If the `blob_cache` feature flag is enabled, there will be options for configuring the cache provided under the `cache` field in the config file. Similarly, if the `signing` feature flag is enabled, you will be able to provide `core.signingKey` a hex-encoded secp256k1 private key to enforce all endpoints provide a signature.
 
 ## Image Proxy
 `/img/<did>/<cid>@<parameters?>`

@@ -1,3 +1,8 @@
+#[cfg(feature = "signing")]
+use secp256k1::{
+    hashes::sha256,
+    ecdsa, Message, Secp256k1
+};
 use rocket::http::ContentType;
 use cached::proc_macro::once;
 #[cfg(feature = "blob_cache")]
@@ -14,6 +19,31 @@ const PLC_DIRECTORY: &str = "https://plc.directory";
 pub fn extract_content_type(bytes: &[u8]) -> ContentType {
     let mime = tree_magic_mini::from_u8(bytes);
     ContentType::parse_flexible(mime).unwrap_or(ContentType::Binary)
+}
+
+#[cfg(feature = "signing")]
+pub fn validate_signature(
+    config: &Config,
+    signature: &str,
+    bytes: &[u8],
+) -> Result<()> {
+    if config.core.signing_key.is_none() {
+        return Ok(());
+    }
+    let sig = hex::decode(signature)?;
+    let is_compact = match ecdsa::Signature::from_compact(&sig) {
+        Ok(parsed) => parsed.serialize_compact() == *sig,
+        Err(_) => false,
+    };
+    let secp = Secp256k1::verification_only();
+    let keypair = config.core.signing_key.as_ref().unwrap();
+    let public_key = keypair.public_key();
+    let data = Message::from_hashed_data::<sha256::Hash>(bytes);
+    let sig = match is_compact {
+        true => ecdsa::Signature::from_compact(&sig)?,
+        false => ecdsa::Signature::from_der(&sig)?,
+    };
+    Ok(secp.verify_ecdsa(&data, &sig, &public_key)?)
 }
 
 pub async fn get_blob(

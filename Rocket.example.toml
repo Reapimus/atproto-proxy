@@ -1,5 +1,6 @@
 [default.core]
 maxBlobSize = 3000000
+# signingKey = "HEX_ENCODED_SECP256K1_PRIVATE_KEY"
 
 [default.cache]
 capacity = 1024

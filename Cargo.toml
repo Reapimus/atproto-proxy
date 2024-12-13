@@ -5,6 +5,7 @@ edition = "2021"
 
 [dependencies]
 http = "1.1.0"
+hex = { version = "0.4.3", optional = true }
 image = "0.25.5"
 rocket = "0.5.1"
 serde = "1.0.215"
@@ -13,7 +14,9 @@ tree_magic_mini = "3.1.6"
 foyer = { version = "0.13.1", optional = true }
 cached = { version = "0.54.0", features = ["async"] }
 reqwest = { version = "0.12.9", features = ["json"] }
+secp256k1 = { version = "0.28.2", features = ["global-context", "serde", "hashes"], optional = true }
 
 [features]
-default = ["blob_cache"]
+default = ["blob_cache", "signing"]
 blob_cache = ["dep:foyer"]
+signing = ["dep:secp256k1", "dep:hex"]

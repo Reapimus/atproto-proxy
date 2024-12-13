@@ -21,8 +21,21 @@ async fn get_image_inner(
     config: &State<Config>,
     accepts: &Accept,
     did: &str,
-    cid: PathBuf
+    cid: PathBuf,
+    sig: Option<String>
 ) -> Result<(ContentType, Vec<u8>), Status> {
+    #[cfg(feature = "signing")]
+    if sig.is_some() {
+        let data = format!("img/{}/{}", did, cid.to_str().unwrap());
+        let bytes = data.as_bytes();
+        util::validate_signature(&config, &sig.unwrap(), bytes).map_err(|_| Status::Unauthorized)?
+    } else {
+        return Err(Status::Unauthorized)
+    }
+    #[cfg(not(feature = "signing"))]
+    if sig.is_some() {
+        return Err(Status::BadRequest)
+    }
     let cid = cid.to_str().unwrap();
     let (cid, parameters) = cid.split_once('@').unwrap_or((cid, ""));
     match util::get_pds(client, did).await {
@@ -95,28 +108,30 @@ async fn get_image_inner(
 }
 
 #[cfg(feature = "blob_cache")]
-#[get("/img/<did>/<cid..>")]
+#[get("/img/<did>/<cid..>?<sig>")]
 pub async fn get_image(
     client: &State<Client>,
     cache: &State<HybridCache<BlobIdentifier, Vec<u8>>>,
     config: &State<Config>,
     accepts: &Accept,
     did: &str,
-    cid: PathBuf
+    cid: PathBuf,
+    sig: Option<String>
 ) -> Result<(ContentType, Vec<u8>), Status> {
-    return get_image_inner(client, cache, config, accepts, did, cid).await
+    return get_image_inner(client, cache, config, accepts, did, cid, sig).await
 }
 
 #[cfg(not(feature = "blob_cache"))]
-#[get("/img/<did>/<cid..>")]
+#[get("/img/<did>/<cid..>?<sig>")]
 pub async fn get_image(
     client: &State<Client>,
     config: &State<Config>,
     accepts: &Accept,
     did: &str,
-    cid: PathBuf
+    cid: PathBuf,
+    sig: Option<String>
 ) -> Result<(ContentType, Vec<u8>), Status> {
-    return get_image_inner(client, config, accepts, did, cid).await
+    return get_image_inner(client, config, accepts, did, cid, sig).await
 }
 
 pub fn routes() -> Vec<rocket::Route> {

@@ -1,6 +1,8 @@
 #[cfg(feature = "blob_cache")]
 use foyer::{HybridCache, HybridCacheBuilder, Engine, DirectFsDeviceOptions};
 use serde::{Deserialize, Serialize};
+#[cfg(feature = "signing")]
+use secp256k1::Keypair;
 
 #[cfg(feature = "blob_cache")]
 use crate::BlobIdentifier;
@@ -17,12 +19,16 @@ pub struct Config {
 #[serde(rename_all = "camelCase")]
 pub struct CoreConfig {
     pub max_blob_size: usize,
+    #[cfg(feature = "signing")]
+    pub signing_key: Option<Keypair>,
 }
 
 impl Default for CoreConfig {
     fn default() -> Self {
         Self {
             max_blob_size: 3_000_000,
+            #[cfg(feature = "signing")]
+            signing_key: None,
         }
     }
 }

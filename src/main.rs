@@ -4,6 +4,11 @@ use serde::{Deserialize, Serialize};
 use reqwest::ClientBuilder;
 use config::Config;
 
+#[catch(401)]
+fn unauthorized() -> &'static str {
+    "Unauthorized"
+}
+
 #[catch(404)]
 fn not_found() -> &'static str {
     "Not found"
@@ -31,7 +36,7 @@ async fn rocket() -> _ {
     let rocket = rocket
         .manage(client)
         .manage(config)
-        .register("/", catchers![not_found, bad_request])
+        .register("/", catchers![not_found, bad_request, unauthorized])
         .mount("/", api::routes());
 
     #[cfg(feature = "blob_cache")]
